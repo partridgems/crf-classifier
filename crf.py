@@ -79,13 +79,20 @@ class CRF(object):
         transition_matrices.append(transition_matrix)
 
         # special diagonal matrix of priors
-        # hard coding that the prior of B is 1 and O is 0
         transition_matrix = np.zeros((num_labels, num_labels))
-        transition_matrix[0,0] = 1
+        # build matrix a row at a time (for each 'from' label)
+        # except in this edge case, ignore the transition features
+        c = sequence[0].sequence_features(0, sequence)
+        for fIndex in range(len(self.label_codebook)):
+            transition_matrix[fIndex] = [exp(
+                # just feature lambdas
+                sum([self.feature_parameters[fIndex,self.feature_codebook[feat]] for feat in c])
+            ) for tIndex in range(len(self.label_codebook))]
+
         transition_matrices.append(transition_matrix)
 
         for t in range(1,len(sequence)):
-            c = sequence[t]
+            c = sequence[t].sequence_features(t, sequence)
             # compute transition matrix
             transition_matrix = np.zeros((num_labels, num_labels))
 
@@ -94,7 +101,7 @@ class CRF(object):
                 transition_matrix[fIndex] = [exp(
                     # transition lambdas plus feature lambdas
                     self.transition_parameters[fIndex, tIndex]
-                    + sum([self.feature_parameters[fIndex,feat] for feat in c])
+                    + sum([self.feature_parameters[fIndex,self.feature_codebook[feat]] for feat in c])
                 ) for tIndex in range(len(self.label_codebook))]
 
             transition_matrices.append(transition_matrix)
@@ -107,9 +114,10 @@ class CRF(object):
         TODO: Implement this function
         """
         num_labels = len(self.label_codebook)
-        alpha_matrix = np.zeros((num_labels, len(sequence) + 1))
-        for t in range(len(sequence) + 1):
-            pass
+        alpha_matrix = np.ones((num_labels, len(sequence) + 1))
+        for t in range(1,len(sequence) + 1):
+            alpha_matrix[:,[t]] = transition_matrices[t].dot(alpha_matrix[:,[t-1]])
+        print alpha_matrix
         return alpha_matrix
 
     def backward(self, sequence, transition_matrices):
@@ -118,11 +126,12 @@ class CRF(object):
         TODO: Implement this function
         """
         num_labels = len(self.label_codebook)
-        beta_matrix = np.zeros((num_labels, len(sequence) + 1))
-        time = range(len(sequence) + 1)
+        beta_matrix = np.ones((num_labels, len(sequence) + 1))
+        time = range(1,len(sequence) + 1)
         time.reverse()
         for t in time:
-            pass
+            beta_matrix[:,[t-1]] = transition_matrices[t].dot(beta_matrix[:,[t]])
+        print beta_matrix
         return beta_matrix
 
     def decode(self, sequence):
