@@ -1,4 +1,5 @@
 import numpy as np
+from math import exp
 
 class CRF(object):
 
@@ -37,7 +38,7 @@ class CRF(object):
                 total_expected_feature_count.fill(0)
                 total_expected_transition_count.fill(0)
                 total_observed_feature_count, total_observed_transition_count = self.compute_observed_count(batch)
-                
+
                 for sequence in batch:
                     transition_matrices = self.compute_transition_matrices(sequence)
                     alpha_matrix = self.forward(sequence, transition_matrices)
@@ -61,7 +62,7 @@ class CRF(object):
         Compute transition matrix M for all time steps.
 
         We add one extra dummy transition matrix at time 0
-        for the base case or not. But this will affect how you implement 
+        for the base case or not. But this will affect how you implement
         all other functions.
 
         The matrix for the first time step does not use transition features
@@ -76,10 +77,28 @@ class CRF(object):
         num_labels = len(self.label_codebook)
         transition_matrix = np.zeros((num_labels, num_labels))
         transition_matrices.append(transition_matrix)
-        for t in range(len(sequence)):
+
+        # special diagonal matrix of priors
+        # hard coding that the prior of B is 1 and O is 0
+        transition_matrix = np.zeros((num_labels, num_labels))
+        transition_matrix[0,0] = 1
+        transition_matrices.append(transition_matrix)
+
+        for t in range(1,len(sequence)):
+            c = sequence[t]
             # compute transition matrix
             transition_matrix = np.zeros((num_labels, num_labels))
+
+            # build matrix a row at a time (for each 'from' label)
+            for fIndex in range(len(self.label_codebook)):
+                transition_matrix[fIndex] = [exp(
+                    # transition lambdas plus feature lambdas
+                    self.transition_parameters[fIndex, tIndex]
+                    + sum([self.feature_parameters[fIndex,feat] for feat in c])
+                ) for tIndex in range(len(self.label_codebook))]
+
             transition_matrices.append(transition_matrix)
+
         return transition_matrices
 
     def forward(self, sequence, transition_matrices):
@@ -91,7 +110,7 @@ class CRF(object):
         alpha_matrix = np.zeros((num_labels, len(sequence) + 1))
         for t in range(len(sequence) + 1):
             pass
-        return alpha_matrix            
+        return alpha_matrix
 
     def backward(self, sequence, transition_matrices):
         """Compute beta matrix in the backward algorithm
@@ -126,7 +145,7 @@ class CRF(object):
 
         Returns :
             A tuple of
-                a matrix of feature counts 
+                a matrix of feature counts
                 a matrix of transition-based feature counts
         """
         num_labels = len(self.label_codebook)
@@ -141,7 +160,7 @@ class CRF(object):
                 feature_count[sequence[t].label_index, sequence[t].feature_vector] += 1
         return feature_count, transition_count
 
-    def compute_expected_feature_count(self, sequence, 
+    def compute_expected_feature_count(self, sequence,
             alpha_matrix, beta_matrix, transition_matrices):
         """Compute expected counts of features from the sequence
 
@@ -151,7 +170,7 @@ class CRF(object):
 
         Returns :
             A tuple of
-                a matrix of feature counts 
+                a matrix of feature counts
                 a matrix of transition-based feature counts
         """
         num_labels = len(self.label_codebook)
@@ -161,7 +180,7 @@ class CRF(object):
         sequence_length = len(sequence)
         Z = np.sum(alpha_matrix[:,-1])
 
-        #gamma = alpha_matrix * beta_matrix / Z 
+        #gamma = alpha_matrix * beta_matrix / Z
         gamma = np.exp(np.log(alpha_matrix) + np.log(beta_matrix) - np.log(Z))
         for t in range(sequence_length):
             for j in range(num_labels):
@@ -181,5 +200,3 @@ def sequence_accuracy(sequence_tagger, test_set):
             if instance.label_index == decoded[i]:
                 correct += 1
     return correct / total
-
-
