@@ -27,7 +27,7 @@ class TestCRF(TestCase):
             self.assertEqual(alpha[li,0], 1)
 
     def test_betaT(self):
-        """ Check the base case for alpha"""
+        """ Check the base case for beta"""
         sequence = self.corpus[0]
         transition_matrices = self.crf.compute_transition_matrices(sequence)
         beta = self.crf.backward(sequence, transition_matrices)
