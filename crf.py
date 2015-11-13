@@ -143,6 +143,19 @@ class CRF(object):
         transition_matrices = self.compute_transition_matrices(sequence)
         decoded_sequence = range(len(sequence))
 
+        # log probabilities for first step
+        scores = {label: sum(self.feature_parameters[label, sequence[0].feature_vector])
+            for label in self.label_codebook.values()}
+        # get label with max score
+        decoded_sequence[0] = scores.keys()[scores.values().index(max(scores.values()))]
+
+        for i in range(1,len(sequence)):
+            # log probabilities for each step
+            scores = {label: sum(self.feature_parameters[label, sequence[i].feature_vector])
+                + self.transition_parameters[decoded_sequence[i-1],label]
+                for label in self.label_codebook.values()}
+            decoded_sequence[i] = scores.keys()[scores.values().index(max(scores.values()))]
+
         return decoded_sequence
 
     def compute_observed_count(self, sequences):
@@ -207,5 +220,4 @@ def sequence_accuracy(sequence_tagger, test_set):
         for i, instance in enumerate(sequence):
             if instance.label_index == decoded[i]:
                 correct += 1
-    if total == 0: return 1.0
     return correct / total
