@@ -33,11 +33,13 @@ class CRF(object):
         print 'With all parameters = 0, the accuracy is %s' % \
                 sequence_accuracy(self, dev_set)
         for i in range(10):
+            print 'Beginning trip', i+1, 'through the training set.'
             for j in range(num_batches):
                 batch = training_set[j*batch_size:(j+1)*batch_size]
                 total_expected_feature_count.fill(0)
                 total_expected_transition_count.fill(0)
-                total_observed_feature_count, total_observed_transition_count = self.compute_observed_count(batch)
+                total_observed_feature_count, total_observed_transition_count = \
+                    self.compute_observed_count(batch)
 
                 for sequence in batch:
                     transition_matrices = self.compute_transition_matrices(sequence)
@@ -84,10 +86,10 @@ class CRF(object):
         # except in this edge case, ignore the transition features
         c = sequence[0].feature_vector
         for fromIndex in range(len(self.label_codebook)):
-            transition_matrix[fromIndex] = [exp(
+            transition_matrix[fromIndex,fromIndex] = exp(
                 # just feature lambdas
                 sum([self.feature_parameters[fromIndex,feat] for feat in c])
-            ) for toIndex in range(len(self.label_codebook))]
+            )
 
         transition_matrices.append(transition_matrix)
 
@@ -144,10 +146,10 @@ class CRF(object):
         decoded_sequence = range(len(sequence))
 
         # log probabilities for first step
-        scores = {label: sum(self.feature_parameters[label, sequence[0].feature_vector])
+        score = {label: sum(self.feature_parameters[label, sequence[0].feature_vector])
             for label in self.label_codebook.values()}
         # get label with max score
-        decoded_sequence[0] = scores.keys()[scores.values().index(max(scores.values()))]
+        decoded_sequence[0] = score.keys()[score.values().index(max(score.values()))]
 
         for i in range(1,len(sequence)):
             # log probabilities for each step
@@ -178,6 +180,7 @@ class CRF(object):
                 if t > 0:
                     transition_count[sequence[t-1].label_index, sequence[t].label_index] += 1
                 feature_count[sequence[t].label_index, sequence[t].feature_vector] += 1
+
         return feature_count, transition_count
 
     def compute_expected_feature_count(self, sequence,
@@ -206,7 +209,12 @@ class CRF(object):
         for t in range(sequence_length):
             for j in range(num_labels):
                 feature_count[j, sequence[t].feature_vector] += gamma[j, t]
-                transition_count[j] += gamma[:,t]
+
+        for t in range(1,sequence_length):
+            for i in range(num_labels):
+                for j in range(num_labels):
+                    transition_count[i,j] += np.exp(np.log(alpha_matrix[i,t-1]) +
+                    np.log(transition_matrices[t][i,j]) + np.log(beta_matrix[j,t]) - np.log(Z))
 
         return feature_count, transition_count
 
