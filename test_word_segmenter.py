@@ -6,6 +6,7 @@ class TestSegmenting(TestCase):
 
     def setUp(self):
         self.corpus = ThaiWordCorpus('orchid97_features.bio', Character)
+        # self.corpus = ThaiWordCorpus('orchid97_features.bio.small', Character)
         crf = CRF(self.corpus.label_codebook, self.corpus.feature_codebook)
         self.crf =crf
 
@@ -13,6 +14,9 @@ class TestSegmenting(TestCase):
         train = self.corpus[0:20000]
         dev = self.corpus[20000:20050]
         test = self.corpus[21000:23000]
+        # train = self.corpus[0:350]
+        # dev = self.corpus[350:375]
+        # test = self.corpus[375:436]
         self.crf.train(train, dev)
 
         accuracy = sequence_accuracy(self.crf, test)
@@ -21,5 +25,3 @@ class TestSegmenting(TestCase):
 
 if __name__ == '__main__':
     main(verbosity=2)
-
-
