@@ -80,29 +80,29 @@ class CRF(object):
 
         # special diagonal matrix of priors
         transition_matrix = np.zeros((num_labels, num_labels))
-        # build matrix a row at a time (for each 'from' label)
+        # build matrix a row at a time (for each 'from' label),
         # except in this edge case, ignore the transition features
-        c = sequence[0].sequence_features(0, sequence)
-        for fIndex in range(len(self.label_codebook)):
-            transition_matrix[fIndex] = [exp(
+        c = sequence[0].feature_vector
+        for fromIndex in range(len(self.label_codebook)):
+            transition_matrix[fromIndex] = [exp(
                 # just feature lambdas
-                sum([self.feature_parameters[fIndex,self.feature_codebook[feat]] for feat in c])
-            ) for tIndex in range(len(self.label_codebook))]
+                sum([self.feature_parameters[fromIndex,feat] for feat in c])
+            ) for toIndex in range(len(self.label_codebook))]
 
         transition_matrices.append(transition_matrix)
 
         for t in range(1,len(sequence)):
-            c = sequence[t].sequence_features(t, sequence)
+            c = sequence[t].feature_vector
             # compute transition matrix
             transition_matrix = np.zeros((num_labels, num_labels))
 
             # build matrix a row at a time (for each 'from' label)
-            for fIndex in range(len(self.label_codebook)):
-                transition_matrix[fIndex] = [exp(
+            for fromIndex in range(len(self.label_codebook)):
+                transition_matrix[fromIndex] = [exp(
                     # transition lambdas plus feature lambdas
-                    self.transition_parameters[fIndex, tIndex]
-                    + sum([self.feature_parameters[fIndex,self.feature_codebook[feat]] for feat in c])
-                ) for tIndex in range(len(self.label_codebook))]
+                    self.transition_parameters[fromIndex, toIndex]
+                    + sum([self.feature_parameters[fromIndex,feat] for feat in c])
+                ) for toIndex in range(len(self.label_codebook))]
 
             transition_matrices.append(transition_matrix)
 
@@ -184,6 +184,7 @@ class CRF(object):
         num_features = len(self.feature_codebook)
 
         feature_count = np.zeros((num_labels, num_features))
+        transition_count = np.zeros((num_labels, num_labels))
         sequence_length = len(sequence)
         Z = np.sum(alpha_matrix[:,-1])
 
@@ -192,9 +193,8 @@ class CRF(object):
         for t in range(sequence_length):
             for j in range(num_labels):
                 feature_count[j, sequence[t].feature_vector] += gamma[j, t]
+                transition_count[j] += gamma[:,t]
 
-        transition_count = np.zeros((num_labels, num_labels))
-        
         return feature_count, transition_count
 
 def sequence_accuracy(sequence_tagger, test_set):
@@ -207,4 +207,5 @@ def sequence_accuracy(sequence_tagger, test_set):
         for i, instance in enumerate(sequence):
             if instance.label_index == decoded[i]:
                 correct += 1
+    if total == 0: return 1.0
     return correct / total
