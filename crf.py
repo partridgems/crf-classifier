@@ -117,7 +117,6 @@ class CRF(object):
         alpha_matrix = np.ones((num_labels, len(sequence) + 1))
         for t in range(1,len(sequence) + 1):
             alpha_matrix[:,[t]] = transition_matrices[t].dot(alpha_matrix[:,[t-1]])
-        print alpha_matrix
         return alpha_matrix
 
     def backward(self, sequence, transition_matrices):
@@ -131,7 +130,6 @@ class CRF(object):
         time.reverse()
         for t in time:
             beta_matrix[:,[t-1]] = transition_matrices[t].dot(beta_matrix[:,[t]])
-        print beta_matrix
         return beta_matrix
 
     def decode(self, sequence):
@@ -196,6 +194,7 @@ class CRF(object):
                 feature_count[j, sequence[t].feature_vector] += gamma[j, t]
 
         transition_count = np.zeros((num_labels, num_labels))
+        
         return feature_count, transition_count
 
 def sequence_accuracy(sequence_tagger, test_set):
