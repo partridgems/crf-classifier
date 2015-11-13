@@ -25,7 +25,7 @@ class Sequence(object):
 
 class Document(object):
     """A document completely characterized by its features.func_closure
-    
+
     feature_vector is a vector of feature indices.
     For CRF implementation, we cannot use string to represent features anymore.
     """
@@ -58,6 +58,7 @@ class Character(Document):
     """
     def sequence_features(self, current_time_step, sequence):
         features = ['T0=%s' % sequence[current_time_step].data[1]]
+        features.append('**BIAS TERM**')
         if current_time_step == 0:
             features.append('T-1=START')
         else:
@@ -78,7 +79,7 @@ class Character2(Document):
     """
 
     def sequence_features(self, current_time_step, sequence):
-        features = ['T0=%s' % sequence[current_time_step].data[1], 
+        features = ['T0=%s' % sequence[current_time_step].data[1],
                 'T0=%s' % sequence[current_time_step].data[0]]
         for i in range(1, 2+1):
             if (current_time_step + i) >= len(sequence):
@@ -95,7 +96,7 @@ class Character2(Document):
         return features
 
 class CharacterTest(Document):
-    """This featurization should get you close to 100% 
+    """This featurization should get you close to 100%
     because we are using the true label as features
 
     """
@@ -156,4 +157,4 @@ class ThaiWordCorpus(Corpus):
                     document.feature_vector.append(self.feature_codebook[feature])
                 if document.label not in self.label_codebook:
                    self.label_codebook[document.label] = len(self.label_codebook)
-                document.label_index = self.label_codebook[document.label] 
+                document.label_index = self.label_codebook[document.label]
