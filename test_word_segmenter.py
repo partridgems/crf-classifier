@@ -1,5 +1,6 @@
 from corpus import Character, Character2, CharacterTest, ThaiWordCorpus
 from crf import CRF, sequence_accuracy
+from maxent import MaxEnt
 from unittest import TestCase, main
 
 class TestSegmenting(TestCase):
@@ -20,6 +21,31 @@ class TestSegmenting(TestCase):
         self.crf.train(train, dev)
 
         accuracy = sequence_accuracy(self.crf, test)
+        print accuracy
+        self.assertGreaterEqual(accuracy, 0.80)
+
+
+class TestSegmentingMaxEnt(TestCase):
+
+    def setUp(self):
+        self.corpus = ThaiWordCorpus('orchid97_features.bio', Character)
+        # self.corpus = ThaiWordCorpus('orchid97_features.bio.small', Character)
+        self.corpus.documents = [char for seq in self.corpus for char in seq]
+        me = MaxEnt(self.corpus.label_codebook, self.corpus.feature_codebook)
+        self.me = me
+        print len(self.corpus)
+
+    def test_segmenting(self):
+        train = self.corpus[0:50000]
+        dev = self.corpus[50000:55000]
+        test = self.corpus[55000:70000]
+        # train = self.corpus[0:8000]
+        # dev = self.corpus[8000:8500]
+        # test = self.corpus[8500:9518]
+        self.me.train(train, dev)
+
+        accuracy = self.me.sequence_accuracy(test)
+        print accuracy
         self.assertGreaterEqual(accuracy, 0.80)
 
 
