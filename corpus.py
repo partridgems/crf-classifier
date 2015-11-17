@@ -90,7 +90,7 @@ class Character2(Document):
                 features.append('T+%s=%s' % (i, sequence[current_time_step+i].data[1]))
 
             if (current_time_step - i) < 0:
-                features.append('T-%s=END' % i)
+                features.append('T-%s=START' % i)
             else:
                 features.append('T-%s=%s' % (i, sequence[current_time_step-i].data[0]))
                 features.append('T-%s=%s' % (i, sequence[current_time_step-i].data[1]))

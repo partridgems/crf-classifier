@@ -21,7 +21,7 @@ class TestSegmenting(TestCase):
         self.crf.train(train, dev)
 
         accuracy = sequence_accuracy(self.crf, test)
-        print accuracy
+        print '%2.1f%%' % (accuracy*100)
         self.assertGreaterEqual(accuracy, 0.80)
 
 
@@ -33,7 +33,6 @@ class TestSegmentingMaxEnt(TestCase):
         self.corpus.documents = [char for seq in self.corpus for char in seq]
         me = MaxEnt(self.corpus.label_codebook, self.corpus.feature_codebook)
         self.me = me
-        print len(self.corpus)
 
     def test_segmenting(self):
         train = self.corpus[0:50000]
@@ -45,7 +44,7 @@ class TestSegmentingMaxEnt(TestCase):
         self.me.train(train, dev)
 
         accuracy = self.me.sequence_accuracy(test)
-        print accuracy
+        print '%2.1f%%' % (accuracy)
         self.assertGreaterEqual(accuracy, 0.80)
 
 
