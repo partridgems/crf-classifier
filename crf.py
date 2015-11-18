@@ -30,8 +30,13 @@ class CRF(object):
         num_batches = len(training_set) / batch_size
         total_expected_feature_count = np.zeros((num_labels, num_features))
         total_expected_transition_count = np.zeros((num_labels, num_labels))
-        print 'With all parameters = 0, the accuracy is %s' % \
-                sequence_accuracy(self, dev_set)
+
+        """Save our go-back point"""
+        old_transition = np.copy(self.transition_parameters)
+        old_feature = np.copy(self.feature_parameters)
+        old_accuracy = sequence_accuracy(self, dev_set)
+
+        print 'With all parameters = 0, the accuracy is %2.2f%%' % (old_accuracy*100)
         for i in range(10):
             print 'Beginning trip', i+1, 'through the training set.'
             for j in range(num_batches):
@@ -55,7 +60,21 @@ class CRF(object):
 
                 self.feature_parameters += learning_rate * feature_gradient
                 self.transition_parameters += learning_rate * transition_gradient
-                print sequence_accuracy(self, dev_set)
+                # print sequence_accuracy(self, dev_set)
+
+            """Finished a trip through the data, check for convergence"""
+            new_accuracy = sequence_accuracy(self, dev_set)
+            print '%2.2f%%' % (new_accuracy*100)
+            if new_accuracy > old_accuracy: # We're still improving
+                """Update parameters"""
+                np.copyto(old_transition, self.transition_parameters)
+                np.copyto(old_feature, self.feature_parameters)
+                old_accuracy = new_accuracy
+            else: # We've stopped improving, go back to last best
+                print 'Stopped improving!'
+                self.transition_parameters = old_transition
+                self.feature_parameters = old_feature
+                return
 
 
     def compute_transition_matrices(self, sequence):
@@ -152,12 +171,14 @@ class CRF(object):
         # for each inductive step, compute the best score for the each current state given any previous state
         for i in range(1,len(sequence)):
             for newLabel in self.label_codebook.values():
+                # bestPrevLabel = np.argmax(scores[i-1])                                  #
+                # possibles = [transition_matrices[i+1][bestPrevLabel,newLabel]]          #
                 # compute two possible values for this state given previous state, keep max
                 possibles = [transition_matrices[i+1][prevLabel,newLabel] + scores[i-1][prevLabel]
                     for prevLabel in range(len(self.label_codebook))]
                 bestPrevLabel = np.argmax(possibles)
                 scores[i][newLabel] = max(possibles)
-                assert(max(possibles) == possibles[bestPrevLabel]) # argmax sanity check
+                # assert(max(possibles) == possibles[bestPrevLabel]) # argmax sanity check
                 decoded_sequence[i][newLabel] = decoded_sequence[i-1][bestPrevLabel] + [newLabel]
 
         return decoded_sequence[-1][np.argmax(scores[-1])]
