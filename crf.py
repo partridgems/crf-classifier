@@ -241,11 +241,14 @@ class CRF(object):
             for j in range(num_labels):
                 feature_count[j, sequence[t].feature_vector] += gamma[j, t]
 
-        for t in range(1,sequence_length):
-            for i in range(num_labels):
-                for j in range(num_labels):
-                    transition_count[i,j] += np.exp(np.log(alpha_matrix[i,t-1]) +
-                    np.log(transition_matrices[t][i,j]) + np.log(beta_matrix[j,t]) - np.log(Z))
+        # for t in range(1,sequence_length):
+        #     for i in range(num_labels):
+        #         for j in range(num_labels):
+        #             transition_count[i,j] += np.exp(np.log(alpha_matrix[i,t-1]) +
+        #             np.log(transition_matrices[t][i,j]) + np.log(beta_matrix[j,t]) - np.log(Z))
+
+        for t in range(sequence_length - 1):
+            transition_count += (transition_matrices[t] * np.outer(alpha_matrix[:, t], beta_matrix[:,t+1])) / Z
 
         return feature_count, transition_count
 
