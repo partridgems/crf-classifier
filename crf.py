@@ -84,17 +84,15 @@ class CRF(object):
         transition_matrix = np.zeros((num_labels, num_labels))
         # build matrix a row at a time (for each 'from' label),
         # except in this edge case, ignore the transition features
-        c = sequence[0].feature_vector
         for fromIndex in range(len(self.label_codebook)):
             transition_matrix[fromIndex,fromIndex] = exp(
                 # just feature lambdas
-                sum([self.feature_parameters[fromIndex,feat] for feat in c])
+                sum(self.feature_parameters[fromIndex,sequence[0].feature_vector])
             )
 
         transition_matrices.append(transition_matrix)
 
         for t in range(1,len(sequence)):
-            c = sequence[t].feature_vector
             # compute transition matrix
             transition_matrix = np.zeros((num_labels, num_labels))
 
@@ -103,7 +101,7 @@ class CRF(object):
                 transition_matrix[fromIndex] = [exp(
                     # transition lambdas plus feature lambdas
                     self.transition_parameters[fromIndex, toIndex]
-                    + sum([self.feature_parameters[fromIndex,feat] for feat in c])
+                    + sum(self.feature_parameters[fromIndex,sequence[t].feature_vector])
                 ) for toIndex in range(len(self.label_codebook))]
 
             transition_matrices.append(transition_matrix)
@@ -143,22 +141,55 @@ class CRF(object):
             a list of label indices (the same length as the sequence)
         """
         transition_matrices = self.compute_transition_matrices(sequence)
-        decoded_sequence = range(len(sequence))
+        decoded_sequence = [[a for a in self.label_codebook.values()] for b in range(len(sequence))]
+        scores = [[a for a in self.label_codebook.values()] for b in range(len(sequence))]
 
         # log probabilities for first step
-        score = {label: sum(self.feature_parameters[label, sequence[0].feature_vector])
-            for label in self.label_codebook.values()}
-        # get label with max score
-        decoded_sequence[0] = score.keys()[score.values().index(max(score.values()))]
+        for label in self.label_codebook.values():
+            decoded_sequence[0][label] = [label]
+            scores[0][label] = transition_matrices[1][label, label]
 
+        # for each inductive step, compute the best score for the each current state given any previous state
         for i in range(1,len(sequence)):
-            # log probabilities for each step
-            scores = {label: sum(self.feature_parameters[label, sequence[i].feature_vector])
-                + self.transition_parameters[decoded_sequence[i-1],label]
-                for label in self.label_codebook.values()}
-            decoded_sequence[i] = scores.keys()[scores.values().index(max(scores.values()))]
+            for newLabel in self.label_codebook.values():
+                # compute two possible values for this state given previous state, keep max
+                possibles = [transition_matrices[i+1][prevLabel,newLabel] + scores[i-1][prevLabel]
+                    for prevLabel in range(len(self.label_codebook))]
+                bestPrevLabel = np.argmax(possibles)
+                scores[i][newLabel] = max(possibles)
+                assert(max(possibles) == possibles[bestPrevLabel])
+                decoded_sequence[i][newLabel] = decoded_sequence[i-1][bestPrevLabel] + [newLabel]
 
-        return decoded_sequence
+        return decoded_sequence[-1][np.argmax(scores[-1])]
+
+        # The below implementation is my earlier broken Viterbi mentioned in my write up
+        # -------------------------------------------------------------------------------
+        # for i in range(1,len(sequence)):
+        #     # log probabilities for each step
+        #     scores = {label: sum(self.feature_parameters[label, sequence[i].feature_vector])
+        #         + self.transition_parameters[decoded_sequence[i-1],label]
+        #         for label in self.label_codebook.values()}
+        #     decoded_sequence[i] = scores.keys()[scores.values().index(max(scores.values()))]
+
+
+        # for i in range(1,len(sequence)):
+        #     # log probabilities for each step
+        #     # possibles[x,y] = log probability of state i-1=x, i=y
+        #     possibles = [[sum(self.feature_parameters[label, sequence[i].feature_vector])
+        #         + self.transition_parameters[prevLabel,label] + decoded_sequence[i-1][prevLabel][0]
+        #         for prevLabel in range(len(self.label_codebook))]
+        #         for label in range(len(self.label_codebook))]
+        #
+        #     # keep the best score for each possible current label and the sequence
+        #
+        #     score = range(len(self.label_codebook))
+        #     for label in self.label_codebook.values():
+        #         maxScore = max(possibles[label])
+        #         maxLabel = np.argmax(possibles[label])
+        #         score[label] = (maxScore, decoded_sequence[i-1][maxLabel][1]+[label])
+        #     decoded_sequence[i] = score
+        #
+        # return decoded_sequence[-1][np.argmax(a[0] for a in decoded_sequence[-1])][1]
 
     def compute_observed_count(self, sequences):
         """Compute observed counts of features from the minibatch
