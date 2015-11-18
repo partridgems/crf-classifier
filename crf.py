@@ -157,39 +157,25 @@ class CRF(object):
                     for prevLabel in range(len(self.label_codebook))]
                 bestPrevLabel = np.argmax(possibles)
                 scores[i][newLabel] = max(possibles)
-                assert(max(possibles) == possibles[bestPrevLabel])
+                assert(max(possibles) == possibles[bestPrevLabel]) # argmax sanity check
                 decoded_sequence[i][newLabel] = decoded_sequence[i-1][bestPrevLabel] + [newLabel]
 
         return decoded_sequence[-1][np.argmax(scores[-1])]
 
+
         # The below implementation is my earlier broken Viterbi mentioned in my write up
         # -------------------------------------------------------------------------------
+        # decoded_sequence = range(len(sequence))
+        # score = {label: sum(self.feature_parameters[label, sequence[0].feature_vector])
+        #      for label in self.label_codebook.values()}
+        # decoded_sequence[0] = score.keys()[score.values().index(max(score.values()))]
         # for i in range(1,len(sequence)):
         #     # log probabilities for each step
         #     scores = {label: sum(self.feature_parameters[label, sequence[i].feature_vector])
         #         + self.transition_parameters[decoded_sequence[i-1],label]
         #         for label in self.label_codebook.values()}
         #     decoded_sequence[i] = scores.keys()[scores.values().index(max(scores.values()))]
-
-
-        # for i in range(1,len(sequence)):
-        #     # log probabilities for each step
-        #     # possibles[x,y] = log probability of state i-1=x, i=y
-        #     possibles = [[sum(self.feature_parameters[label, sequence[i].feature_vector])
-        #         + self.transition_parameters[prevLabel,label] + decoded_sequence[i-1][prevLabel][0]
-        #         for prevLabel in range(len(self.label_codebook))]
-        #         for label in range(len(self.label_codebook))]
-        #
-        #     # keep the best score for each possible current label and the sequence
-        #
-        #     score = range(len(self.label_codebook))
-        #     for label in self.label_codebook.values():
-        #         maxScore = max(possibles[label])
-        #         maxLabel = np.argmax(possibles[label])
-        #         score[label] = (maxScore, decoded_sequence[i-1][maxLabel][1]+[label])
-        #     decoded_sequence[i] = score
-        #
-        # return decoded_sequence[-1][np.argmax(a[0] for a in decoded_sequence[-1])][1]
+        # return decoded_sequence
 
     def compute_observed_count(self, sequences):
         """Compute observed counts of features from the minibatch
