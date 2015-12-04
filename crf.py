@@ -135,7 +135,8 @@ class CRF(object):
         num_labels = len(self.label_codebook)
         alpha_matrix = np.ones((num_labels, len(sequence) + 1))
         for t in range(1,len(sequence) + 1):
-            alpha_matrix[:,[t]] = transition_matrices[t].dot(alpha_matrix[:,[t-1]])
+            # alpha_matrix[:,[t]] = transition_matrices[t].dot(alpha_matrix[:,[t-1]])
+            alpha_matrix[:,[t]] = alpha_matrix[:,[t-1]].dot(transition_matrices[t])
         return alpha_matrix
 
     def backward(self, sequence, transition_matrices):
